@@ -2,40 +2,62 @@ import { useState } from 'react'
 import GreeksPanel from './components/GreeksPanel.jsx'
 import ChainView from './components/ChainView.jsx'
 
-const TABS = ['Greeks Explorer', 'Live Chain']
+const TABS = [
+  { id: 0, label: 'Greeks Explorer' },
+  { id: 1, label: 'Live Chain' },
+]
 
 export default function App() {
   const [tab, setTab] = useState(0)
 
   return (
-    <div style={{ maxWidth: 1100, margin: '0 auto', padding: '24px 20px' }}>
+    <div style={{ maxWidth: 1200, margin: '0 auto', padding: '32px 24px' }}>
+
       {/* Header */}
-      <div style={{ marginBottom: 24, borderBottom: '1px solid var(--border)', paddingBottom: 16 }}>
-        <div style={{ display: 'flex', alignItems: 'baseline', gap: 12, marginBottom: 4 }}>
-          <span style={{ color: 'var(--green)', fontSize: 11, letterSpacing: '0.1em' }}>▶</span>
-          <h1 style={{ fontSize: 15, letterSpacing: '0.08em', color: 'var(--text)' }}>
-            QUANT OPTIONS ENGINE
+      <div style={{ marginBottom: 32 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
+          <div style={{
+            width: 28, height: 28, borderRadius: 8,
+            background: 'linear-gradient(135deg, #8b5cf6, #6366f1)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            fontSize: 13, fontWeight: 700, color: '#fff', flexShrink: 0,
+          }}>
+            Q
+          </div>
+          <h1 style={{ fontSize: 18, fontWeight: 700, letterSpacing: '-0.01em', color: 'var(--text)' }}>
+            Quant Options Engine
           </h1>
         </div>
-        <p style={{ color: 'var(--dim)', fontSize: 11, letterSpacing: '0.06em' }}>
-          BLACK-SCHOLES · MONTE CARLO · IMPLIED VOLATILITY · LIVE CHAIN
+        <p style={{ color: 'var(--muted)', fontSize: 13, paddingLeft: 38 }}>
+          Black-Scholes · Monte Carlo · Implied Volatility · Live Chain
         </p>
       </div>
 
-      {/* Tab bar */}
-      <div style={{ display: 'flex', gap: 6, marginBottom: 24 }}>
-        {TABS.map((label, i) => (
+      {/* Tabs */}
+      <div style={{
+        display: 'flex', gap: 4, marginBottom: 28,
+        borderBottom: '1px solid var(--border-soft)', paddingBottom: 0,
+      }}>
+        {TABS.map(({ id, label }) => (
           <button
-            key={label}
-            className={tab === i ? 'active' : ''}
-            onClick={() => setTab(i)}
+            key={id}
+            onClick={() => setTab(id)}
+            style={{
+              borderRadius: '8px 8px 0 0',
+              borderBottom: tab === id ? '2px solid var(--accent)' : '2px solid transparent',
+              borderLeft: 'none', borderRight: 'none', borderTop: 'none',
+              background: 'transparent',
+              color: tab === id ? 'var(--accent)' : 'var(--muted)',
+              padding: '8px 18px',
+              fontWeight: tab === id ? 600 : 400,
+              fontSize: 13,
+            }}
           >
-            {label.toUpperCase()}
+            {label}
           </button>
         ))}
       </div>
 
-      {/* Tab content */}
       {tab === 0 && <GreeksPanel />}
       {tab === 1 && <ChainView />}
     </div>

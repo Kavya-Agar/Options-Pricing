@@ -6,22 +6,27 @@ import {
 function CustomTooltip({ active, payload }) {
   if (!active || !payload?.length) return null
   const d = payload[0].payload
+  const isCall = d.optionType === 'call'
+  const diff = d.y - d.x
   return (
     <div style={{
       background: 'var(--surface)',
       border: '1px solid var(--border)',
-      padding: '8px 12px',
-      fontSize: 11,
+      borderRadius: 8,
+      padding: '10px 14px',
+      fontSize: 12,
+      lineHeight: 1.7,
+      boxShadow: '0 4px 24px #00000060',
     }}>
-      <div style={{ color: d.optionType === 'call' ? 'var(--green)' : 'var(--red)', marginBottom: 4 }}>
-        K={d.strike} {d.optionType.toUpperCase()}
+      <div style={{ fontWeight: 700, color: isCall ? 'var(--green)' : 'var(--red)', marginBottom: 4 }}>
+        K = {d.strike} · {d.optionType.toUpperCase()}
       </div>
-      <div>Market:  <span style={{ color: 'var(--text)' }}>${d.x.toFixed(3)}</span></div>
-      <div>BS:      <span style={{ color: 'var(--text)' }}>${d.y.toFixed(3)}</span></div>
-      <div style={{ color: d.y - d.x >= 0 ? 'var(--green)' : 'var(--red)' }}>
-        Δ {d.y - d.x >= 0 ? '+' : ''}{(d.y - d.x).toFixed(3)}
+      <div style={{ color: 'var(--secondary)' }}>Market  <span style={{ color: 'var(--text)', fontWeight: 600 }}>${d.x.toFixed(3)}</span></div>
+      <div style={{ color: 'var(--secondary)' }}>BS      <span style={{ color: 'var(--text)', fontWeight: 600 }}>${d.y.toFixed(3)}</span></div>
+      <div style={{ color: diff >= 0 ? 'var(--green)' : 'var(--red)', fontWeight: 600 }}>
+        {diff >= 0 ? '▲' : '▼'} {diff >= 0 ? '+' : ''}{diff.toFixed(3)}
       </div>
-      {d.iv && <div className="dim">IV: {(d.iv * 100).toFixed(1)}%</div>}
+      {d.iv && <div style={{ color: 'var(--muted)', marginTop: 2 }}>IV: {(d.iv * 100).toFixed(1)}%</div>}
     </div>
   )
 }
@@ -37,42 +42,56 @@ export default function MispricingChart({ contracts }) {
     .filter(c => c.option_type === 'put' && c.iv != null)
     .map(c => ({ x: c.market_price, y: c.bs_price, strike: c.strike, optionType: 'put', iv: c.iv }))
 
-  // Reference line domain: union of all x/y values
   const allPrices = contracts.map(c => [c.market_price, c.bs_price]).flat().filter(Boolean)
   const lo = Math.min(...allPrices)
   const hi = Math.max(...allPrices)
 
   return (
-    <div style={{ marginBottom: 24 }}>
-      <div style={{ color: 'var(--dim)', fontSize: 11, letterSpacing: '0.08em', marginBottom: 12 }}>
-        THEORETICAL VS MARKET PRICE — points above the diagonal are BS-overpriced
+    <div style={{
+      background: 'var(--surface)', border: '1px solid var(--border-soft)',
+      borderRadius: 12, padding: '20px 16px', marginBottom: 20,
+    }}>
+      <div style={{ marginBottom: 16 }}>
+        <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)', marginBottom: 3 }}>
+          Theoretical vs. Market Price
+        </div>
+        <div style={{ fontSize: 12, color: 'var(--muted)' }}>
+          Points above the diagonal are BS-overpriced relative to market
+        </div>
       </div>
-      <ResponsiveContainer width="100%" height={300}>
-        <ScatterChart margin={{ top: 8, right: 20, bottom: 20, left: 10 }}>
-          <CartesianGrid stroke="var(--border)" strokeDasharray="3 3" />
+
+      <ResponsiveContainer width="100%" height={280}>
+        <ScatterChart margin={{ top: 8, right: 20, bottom: 28, left: 10 }}>
+          <CartesianGrid stroke="var(--border-soft)" strokeDasharray="3 4" />
           <XAxis
             type="number" dataKey="x" name="Market" domain={['auto', 'auto']}
-            tick={{ fill: 'var(--dim)', fontSize: 10 }}
-            label={{ value: 'Market Price ($)', position: 'insideBottom', offset: -10, fill: 'var(--dim)', fontSize: 10 }}
+            tick={{ fill: 'var(--muted)', fontSize: 11, fontFamily: 'Inter, sans-serif' }}
+            label={{ value: 'Market Price ($)', position: 'insideBottom', offset: -14, fill: 'var(--muted)', fontSize: 11 }}
           />
           <YAxis
             type="number" dataKey="y" name="BS"
-            tick={{ fill: 'var(--dim)', fontSize: 10 }}
-            label={{ value: 'BS Price ($)', angle: -90, position: 'insideLeft', offset: 10, fill: 'var(--dim)', fontSize: 10 }}
+            tick={{ fill: 'var(--muted)', fontSize: 11, fontFamily: 'Inter, sans-serif' }}
+            label={{ value: 'BS Price ($)', angle: -90, position: 'insideLeft', offset: 14, fill: 'var(--muted)', fontSize: 11 }}
           />
-          {/* Perfect pricing diagonal */}
           <ReferenceLine
             segment={[{ x: lo, y: lo }, { x: hi, y: hi }]}
-            stroke="var(--dim)" strokeDasharray="4 4"
+            stroke="var(--muted)" strokeDasharray="5 4" strokeWidth={1}
           />
-          <Tooltip content={<CustomTooltip />} cursor={{ stroke: 'var(--border)' }} />
-          <Scatter name="call" data={calls} fill="var(--green)" opacity={0.8} r={4} />
-          <Scatter name="put"  data={puts}  fill="var(--red)"   opacity={0.8} r={4} />
+          <Tooltip content={<CustomTooltip />} cursor={{ stroke: 'var(--border)', strokeWidth: 1 }} />
+          <Scatter name="call" data={calls} fill="#22c55e" opacity={0.75} r={4} />
+          <Scatter name="put"  data={puts}  fill="#f43f5e" opacity={0.75} r={4} />
         </ScatterChart>
       </ResponsiveContainer>
-      <div style={{ display: 'flex', justifyContent: 'center', gap: 20, marginTop: 8, fontSize: 11, color: 'var(--dim)' }}>
-        <span><span style={{ display: 'inline-block', width: 8, height: 8, borderRadius: '50%', background: 'var(--green)', marginRight: 6 }} />CALL</span>
-        <span><span style={{ display: 'inline-block', width: 8, height: 8, borderRadius: '50%', background: 'var(--red)',   marginRight: 6 }} />PUT</span>
+
+      <div style={{ display: 'flex', justifyContent: 'center', gap: 20, marginTop: 4, fontSize: 12, color: 'var(--secondary)' }}>
+        <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+          <span style={{ width: 9, height: 9, borderRadius: '50%', background: '#22c55e', display: 'inline-block' }} />
+          Call
+        </span>
+        <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+          <span style={{ width: 9, height: 9, borderRadius: '50%', background: '#f43f5e', display: 'inline-block' }} />
+          Put
+        </span>
       </div>
     </div>
   )
