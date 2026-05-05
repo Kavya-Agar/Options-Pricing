@@ -9,18 +9,33 @@ A from-scratch quantitative options pricing engine built in Python, implementing
 | 1 | Black-Scholes pricer + all five Greeks | ✅ |
 | 2 | Monte Carlo GBM simulator + antithetic variance reduction | ✅ |
 | 3 | Market data (yfinance) + Implied Volatility solver (Brent's method) | ✅ |
-| 4 | FastAPI REST backend | 🔜 |
-| 5 | React dashboard (Greeks heatmap, IV surface, mispricing chart) | 🔜 |
+| 4 | FastAPI REST backend | ✅ |
+| 5 | React dashboard (Greeks heatmap, IV surface, mispricing chart) | ✅ |
 
 ## Project Structure
 
 ```
-Options-Pricing/
+quant-options-engine/
 ├── pricing/                   # Core pricing library
 │   ├── black_scholes.py       # Closed-form BS price + Greeks (Phase 1)
 │   ├── monte_carlo.py         # GBM simulation pricer (Phase 2)
 │   ├── market_data.py         # Spot price, risk-free rate, options chain (Phase 3)
 │   └── iv_solver.py           # Implied volatility solver — Brent's method (Phase 3)
+├── api/                       # FastAPI backend (Phase 4)
+│   ├── main.py                # App entry point + CORS
+│   └── routes/
+│       ├── price.py           # POST /api/price · GET /api/compute
+│       └── chain.py           # GET /api/chain · GET /api/expiries
+├── dashboard/                 # React frontend (Phase 5)
+│   ├── src/
+│   │   ├── App.jsx            # Tab layout
+│   │   ├── bs.js              # Client-side BS for real-time sliders
+│   │   ├── api.js             # Fetch wrappers
+│   │   └── components/
+│   │       ├── GreeksPanel.jsx    # Interactive Greeks sliders
+│   │       ├── ChainView.jsx      # Live chain table + controls
+│   │       └── MispricingChart.jsx # Recharts scatter plot
+│   └── vite.config.js         # Dev server proxies /api → FastAPI
 └── tests/                     # Test suite
     ├── test_black_scholes.py  # BS tests with reference values + identities
     ├── test_monte_carlo.py    # MC convergence + variance reduction tests
@@ -29,17 +44,36 @@ Options-Pricing/
 
 ## Quickstart
 
+**Backend**
+
 ```bash
 pip install -r requirements.txt
 
-# Run all tests
+# Run the API
+uvicorn api.main:app --reload --port 8000
+# → Docs at http://localhost:8000/docs
+```
+
+**Frontend**
+
+```bash
+cd dashboard
+npm install
+npm run dev
+# → http://localhost:5173
+```
+
+**Tests**
+
+```bash
 pytest tests/ -v
+```
 
-# See Black-Scholes output
-python -m pricing.black_scholes
+**Demo scripts**
 
-# See Monte Carlo convergence demo
-python -m pricing.monte_carlo
+```bash
+python -m pricing.black_scholes   # BS reference output
+python -m pricing.monte_carlo     # MC convergence table
 ```
 
 ## Phase 1 — Black-Scholes
@@ -97,7 +131,7 @@ rows = mc_convergence(S=100, K=100, T=1.0, r=0.05, sigma=0.20)
 - **95% confidence interval**: quantifies the uncertainty of each MC estimate
 - **Convergence tracking**: error shrinks at rate `O(1/√n)` — doubling precision costs 4× the compute
 
-**Why MC when BS is exact?**  
+**Why MC when BS is exact?**
 BS only works for European options under strict assumptions. Monte Carlo handles any payoff (Asian, barrier, etc.) and can incorporate stochastic volatility, jumps, and dividends — it's the industry tool for exotic derivatives.
 
 ## Phase 3 — Market Data + Implied Volatility
@@ -136,6 +170,63 @@ calls_with_iv, puts_with_iv = full_chain_with_iv(calls, puts, S=S, T=T, r=r)
 
 `implied_vol` returns `None` (not an exception) when no valid solution exists — expired options, prices at or below intrinsic value, or contracts too far outside any realistic vol range.
 
+## Phase 4 — FastAPI Backend
+
+Four REST endpoints served by FastAPI with auto-generated OpenAPI docs.
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/api/price` | POST | Live spot + risk-free rate fetch → BS price + all Greeks |
+| `/api/compute` | GET | Raw BS computation from query params — no market data |
+| `/api/chain` | GET | Full options chain with IV and mispricing |
+| `/api/expiries` | GET | Available expiry dates for a ticker |
+
+```bash
+# Start the server
+uvicorn api.main:app --reload --port 8000
+
+# Interactive docs
+open http://localhost:8000/docs
+```
+
+```bash
+# Theoretical price + Greeks for a live ticker
+curl -X POST http://localhost:8000/api/price \
+  -H "Content-Type: application/json" \
+  -d '{"ticker": "SPY", "strike": 545, "expiry": "2025-09-19", "option_type": "call"}'
+
+# Raw computation (no market data fetch, instant)
+curl "http://localhost:8000/api/compute?S=100&K=100&T=1.0&r=0.05&sigma=0.20&option_type=call"
+
+# Full chain with IV
+curl "http://localhost:8000/api/chain?ticker=SPY"
+```
+
+If `sigma` is omitted from `/api/price`, 30-day annualised historical volatility is computed from yfinance closes.
+
+## Phase 5 — React Dashboard
+
+A dark terminal-aesthetic React dashboard (Vite + Recharts) with two views:
+
+**Greeks Explorer** — real-time sliders for S, K, T, r, σ and option type. All six Greeks update instantly client-side (no network call) using a JS implementation of the BS formula.
+
+- Price, Delta, Gamma, Vega, Theta, Rho displayed as cards
+- Breakeven, intrinsic value, and time value annotations
+- ITM/ATM/OTM moneyness indicator
+
+**Live Chain** — fetches a real options chain from the API and displays:
+
+- Scatter plot: market price vs BS price per contract (calls green, puts red). The diagonal is fair value; points above it are BS-overpriced.
+- Table: strike, type, market price, BS price, mispricing, IV, bid/ask, volume, OI
+- Filter by calls / puts / all
+- Stats bar: spot, T, risk-free rate, contract counts, average IV
+
+```bash
+cd dashboard
+npm install
+npm run dev   # → http://localhost:5173
+```
+
 ## Running Tests
 
 ```bash
@@ -146,17 +237,17 @@ The Black-Scholes tests verify exact reference values and mathematical identitie
 
 ## Key Concepts (Interview Reference)
 
-**What do d1 and d2 represent?**  
+**What do d1 and d2 represent?**
 `N(d2)` is the risk-neutral probability of expiring in-the-money. `N(d1)` is the call Delta — the number of shares needed to replicate the option.
 
-**Why does Monte Carlo converge to Black-Scholes for European options?**  
+**Why does Monte Carlo converge to Black-Scholes for European options?**
 Both price the same expected payoff under the risk-neutral measure. BS computes the expectation analytically; MC estimates it by averaging simulated outcomes. By the law of large numbers they must agree.
 
-**What is implied volatility?**  
+**What is implied volatility?**
 The market-observed option price contains an implicit forward-looking volatility estimate. IV is the σ that makes `BS(σ) = market price`. It's the market's best guess of future realized vol.
 
-**Why Brent's method for IV?**  
+**Why Brent's method for IV?**
 Brent's method combines bisection (guaranteed convergence) with secant/quadratic interpolation (fast convergence). Pure bisection is slow; Newton's method can diverge near Vega ≈ 0. Brent's method is robust and fast.
 
-**What is the volatility smile/skew?**  
+**What is the volatility smile/skew?**
 If BS were perfectly correct, IV would be constant across strikes. In practice, lower strikes have higher IV (skew) because investors buy downside protection. This reveals BS's assumptions are violated in real markets.

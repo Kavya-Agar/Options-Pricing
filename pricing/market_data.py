@@ -102,3 +102,28 @@ def get_options_chain(
 
     chain = t.option_chain(expiry)
     return chain.calls, chain.puts, available, expiry
+
+
+def historical_vol(ticker: str, window: int = 30) -> float:
+    """
+    Compute annualised historical volatility from daily log returns.
+
+    Args:
+        ticker: Stock ticker symbol
+        window: Number of trading days to use (default: 30)
+
+    Returns:
+        Annualised volatility as a decimal (e.g., 0.20 = 20%).
+    """
+    import numpy as np
+
+    t = yf.Ticker(ticker.upper())
+    hist = t.history(period="90d")
+    if len(hist) < window:
+        raise ValueError(
+            f"Insufficient price history for '{ticker}' "
+            f"(need {window} trading days, got {len(hist)})."
+        )
+    closes = hist["Close"].iloc[-window:]
+    log_returns = np.log(closes / closes.shift(1)).dropna()
+    return float(log_returns.std() * np.sqrt(252))

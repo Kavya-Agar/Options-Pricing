@@ -1,0 +1,93 @@
+/* Finance terminal aesthetic — dark background, monospace, green accents */
+
+:root {
+  --bg:        #0a0a0a;
+  --surface:   #111111;
+  --border:    #1e1e1e;
+  --text:      #d4d4d4;
+  --dim:       #555555;
+  --green:     #00c97a;
+  --green-dim: #00c97a33;
+  --red:       #e05252;
+  --red-dim:   #e0525233;
+  --yellow:    #c9a000;
+  --accent:    #4a9eff;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 13px;
+  min-height: 100vh;
+}
+
+h1, h2, h3 { font-weight: 600; letter-spacing: 0.04em; }
+
+button {
+  font-family: inherit;
+  font-size: 12px;
+  cursor: pointer;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+  padding: 6px 14px;
+  letter-spacing: 0.06em;
+  transition: border-color 0.15s, color 0.15s;
+}
+button:hover { border-color: var(--green); color: var(--green); }
+button.active { border-color: var(--green); color: var(--green); background: var(--green-dim); }
+
+input, select {
+  font-family: inherit;
+  font-size: 12px;
+  background: var(--surface);
+  color: var(--text);
+  border: 1px solid var(--border);
+  padding: 6px 10px;
+  outline: none;
+  transition: border-color 0.15s;
+}
+input:focus, select:focus { border-color: var(--green); }
+
+input[type="range"] {
+  -webkit-appearance: none;
+  appearance: none;
+  background: transparent;
+  border: none;
+  padding: 0;
+  width: 100%;
+  cursor: pointer;
+}
+input[type="range"]::-webkit-slider-runnable-track {
+  height: 2px;
+  background: var(--border);
+  border-radius: 1px;
+}
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--green);
+  margin-top: -5px;
+}
+
+table { width: 100%; border-collapse: collapse; }
+th {
+  text-align: left;
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  color: var(--dim);
+  border-bottom: 1px solid var(--border);
+  padding: 6px 10px;
+}
+td { padding: 5px 10px; border-bottom: 1px solid var(--border); font-size: 12px; }
+tr:hover td { background: var(--surface); }
+
+.pos { color: var(--green); }
+.neg { color: var(--red); }
+.dim { color: var(--dim); }
