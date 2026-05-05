@@ -1,8 +1,6 @@
 """
 Black-Scholes Options Pricer + Greeks Calculator
 =================================================
-Phase 1 of the Options Pricing Engine project.
-
 The Black-Scholes model prices European options under these assumptions:
   - The underlying follows geometric Brownian motion (log-normal returns)
   - No dividends, no transaction costs, continuous trading
@@ -65,8 +63,8 @@ def bs_price(S: float, K: float, T: float, r: float, sigma: float, option_type: 
     Put formula:   P = K * e^(-rT) * N(-d2) - S * N(-d1)
 
     Intuition for the call formula:
-      - S * N(d1)         : expected value of receiving the stock if exercised
-      - K * e^(-rT) * N(d2): present value of paying the strike if exercised
+      - S * N(d1)            : expected value of receiving the stock if exercised
+      - K * e^(-rT) * N(d2)  : present value of paying the strike if exercised
       The difference is what you'd pay today to lock in that exchange.
 
     Put-Call Parity (useful sanity check):
@@ -201,8 +199,8 @@ def theta(S: float, K: float, T: float, r: float, sigma: float, option_type: str
     The Gamma-Theta trade-off is fundamental: high Gamma (good) comes with
     high negative Theta (costly). You pay for the ability to profit from moves.
 
-    Convention: Theta is typically quoted per calendar day, so we divide by 365.
-    Some practitioners divide by 252 (trading days). Be consistent.
+    Convention: Theta is quoted per calendar day, so we divide by 365.
+    Some practitioners divide by 252 (trading days) — be consistent.
 
     Formula:
         Call: Θ = -[S * N'(d1) * sigma / (2*sqrt(T))] - r * K * e^(-rT) * N(d2)
@@ -223,8 +221,7 @@ def theta(S: float, K: float, T: float, r: float, sigma: float, option_type: str
     else:
         raise ValueError(f"option_type must be 'call' or 'put', got '{option_type}'.")
 
-    # Convert from per-year to per-day (calendar days)
-    return th / 365.0
+    return th / 365.0  # convert from per-year to per-day
 
 
 def rho(S: float, K: float, T: float, r: float, sigma: float, option_type: str = "call") -> float:
@@ -239,8 +236,7 @@ def rho(S: float, K: float, T: float, r: float, sigma: float, option_type: str =
     Rho tends to matter more for long-dated options (LEAPS). For short-dated
     options, Rho is usually the least important Greek.
 
-    Convention: Rho is often quoted per 1% (0.01) change in the rate,
-    so we divide by 100 here.
+    Convention: Rho is quoted per 1% (0.01) change in the rate, so we divide by 100.
 
     Formula:
         Call: ρ =  K * T * e^(-rT) * N(d2)  / 100
@@ -273,7 +269,7 @@ def greeks(
     """
     Return all Greeks and the theoretical price in a single dict.
 
-    This is the main entry point you'll call from the API layer.
+    This is the main entry point called from the API layer.
 
     Returns a dict with keys:
         price, delta, gamma, vega, theta, rho
@@ -281,8 +277,8 @@ def greeks(
     return {
         "price": bs_price(S, K, T, r, sigma, option_type),
         "delta": delta(S, K, T, r, sigma, option_type),
-        "gamma": gamma(S, K, T, r, sigma),        # same for calls & puts
-        "vega":  vega(S, K, T, r, sigma),          # same for calls & puts
+        "gamma": gamma(S, K, T, r, sigma),       # same for calls & puts
+        "vega":  vega(S, K, T, r, sigma),         # same for calls & puts
         "theta": theta(S, K, T, r, sigma, option_type),
         "rho":   rho(S, K, T, r, sigma, option_type),
     }
@@ -312,7 +308,6 @@ if __name__ == "__main__":
         print(f"    Theta : {g['theta']:>10.4f}  (per day)")
         print(f"    Rho   : {g['rho']:>10.4f}  (per 1% rate move)")
 
-    # Sanity check: put-call parity
     call_p = bs_price(S, K, T, r, sigma, "call")
     put_p  = bs_price(S, K, T, r, sigma, "put")
     parity = call_p - put_p

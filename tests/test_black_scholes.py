@@ -6,8 +6,8 @@ Reference values come from two sources:
   2. Manual calculation using the BS formula — checked against online calculators
 
 How to run:
-    pip install scipy pytest
-    pytest test_pricer.py -v
+    pip install -r requirements.txt
+    pytest tests/ -v
 
 Each test explains WHAT it is checking and WHY that value is expected.
 If a test fails, the formula is wrong — do not adjust tolerances to make it pass.
@@ -15,7 +15,7 @@ If a test fails, the formula is wrong — do not adjust tolerances to make it pa
 
 import math
 import pytest
-from pricer import bs_price, greeks, delta, gamma, vega, theta, rho, _d1_d2
+from pricing.black_scholes import bs_price, greeks, delta, gamma, vega, theta, rho, _d1_d2
 
 
 # ---------------------------------------------------------------------------
@@ -25,10 +25,6 @@ from pricer import bs_price, greeks, delta, gamma, vega, theta, rho, _d1_d2
 # ---------------------------------------------------------------------------
 TOLERANCE = 1e-4
 
-
-# ---------------------------------------------------------------------------
-# Reference values
-# ---------------------------------------------------------------------------
 
 class TestBlackScholesPrice:
     """
@@ -128,7 +124,7 @@ class TestDelta:
       - ATM call delta ≈ 0.5 (exactly 0.5 when r=0)
       - Call delta is always in (0, 1)
       - Put delta is always in (-1, 0)
-      - Call delta + |Put delta| ≈ 1 (not exact, but close for ATM)
+      - Call delta - Put delta = 1 (exact identity from put-call parity)
     """
 
     def test_atm_call_delta_near_half(self):
@@ -193,7 +189,6 @@ class TestGamma:
         the second derivatives are equal: Gamma_call = Gamma_put.
         """
         g = gamma(S=100, K=100, T=1.0, r=0.05, sigma=0.20)
-        # Both call and put use the same formula — just confirming it's positive
         assert g > 0
 
     def test_hull_example_gamma(self):
@@ -211,9 +206,9 @@ class TestGamma:
         Gamma peaks at-the-money and falls off on either side.
         This is because the delta is changing most rapidly when S ≈ K.
         """
-        g_atm  = gamma(S=100, K=100, T=1.0, r=0.05, sigma=0.20)
-        g_itm  = gamma(S=130, K=100, T=1.0, r=0.05, sigma=0.20)
-        g_otm  = gamma(S=70,  K=100, T=1.0, r=0.05, sigma=0.20)
+        g_atm = gamma(S=100, K=100, T=1.0, r=0.05, sigma=0.20)
+        g_itm = gamma(S=130, K=100, T=1.0, r=0.05, sigma=0.20)
+        g_otm = gamma(S=70,  K=100, T=1.0, r=0.05, sigma=0.20)
         assert g_atm > g_itm
         assert g_atm > g_otm
 
@@ -237,7 +232,7 @@ class TestVega:
         More time = more uncertainty = vol matters more.
         A 1-year option has higher vega than a 1-month option.
         """
-        v_long  = vega(S=100, K=100, T=1.0, r=0.05, sigma=0.20)
+        v_long  = vega(S=100, K=100, T=1.0,  r=0.05, sigma=0.20)
         v_short = vega(S=100, K=100, T=1/12, r=0.05, sigma=0.20)
         assert v_long > v_short
 
