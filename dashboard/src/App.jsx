@@ -14,7 +14,7 @@ export default function App() {
         <div style={{ display: 'flex', alignItems: 'baseline', gap: 12, marginBottom: 4 }}>
           <span style={{ color: 'var(--green)', fontSize: 11, letterSpacing: '0.1em' }}>▶</span>
           <h1 style={{ fontSize: 15, letterSpacing: '0.08em', color: 'var(--text)' }}>
-            OPTIONS PRICING ENGINE
+            QUANT OPTIONS ENGINE
           </h1>
         </div>
         <p style={{ color: 'var(--dim)', fontSize: 11, letterSpacing: '0.06em' }}>
