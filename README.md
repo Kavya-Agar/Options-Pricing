@@ -8,7 +8,7 @@ A from-scratch quantitative options pricing engine built in Python, implementing
 |-------|-------|--------|
 | 1 | Black-Scholes pricer + all five Greeks | ✅ |
 | 2 | Monte Carlo GBM simulator + antithetic variance reduction | ✅ |
-| 3 | Market data (yfinance) + Implied Volatility solver (Brent's method) | 🔜 |
+| 3 | Market data (yfinance) + Implied Volatility solver (Brent's method) | ✅ |
 | 4 | FastAPI REST backend | 🔜 |
 | 5 | React dashboard (Greeks heatmap, IV surface, mispricing chart) | 🔜 |
 
@@ -18,10 +18,13 @@ A from-scratch quantitative options pricing engine built in Python, implementing
 Options-Pricing/
 ├── pricing/                   # Core pricing library
 │   ├── black_scholes.py       # Closed-form BS price + Greeks (Phase 1)
-│   └── monte_carlo.py         # GBM simulation pricer (Phase 2)
+│   ├── monte_carlo.py         # GBM simulation pricer (Phase 2)
+│   ├── market_data.py         # Spot price, risk-free rate, options chain (Phase 3)
+│   └── iv_solver.py           # Implied volatility solver — Brent's method (Phase 3)
 └── tests/                     # Test suite
     ├── test_black_scholes.py  # BS tests with reference values + identities
-    └── test_monte_carlo.py    # MC convergence + variance reduction tests
+    ├── test_monte_carlo.py    # MC convergence + variance reduction tests
+    └── test_iv_solver.py      # IV round-trip tests + edge cases
 ```
 
 ## Quickstart
@@ -96,6 +99,42 @@ rows = mc_convergence(S=100, K=100, T=1.0, r=0.05, sigma=0.20)
 
 **Why MC when BS is exact?**  
 BS only works for European options under strict assumptions. Monte Carlo handles any payoff (Asian, barrier, etc.) and can incorporate stochastic volatility, jumps, and dividends — it's the industry tool for exotic derivatives.
+
+## Phase 3 — Market Data + Implied Volatility
+
+Phase 3 connects the pricing engine to real market data and adds an implied volatility solver.
+
+**Market data** (`pricing/market_data.py`):
+
+```python
+from pricing.market_data import get_risk_free_rate, get_spot_price, get_options_chain, expiry_to_years
+
+# 3-month T-bill rate from FRED (no API key required)
+r = get_risk_free_rate()   # e.g. 0.0525
+
+# Current spot price via yfinance
+S = get_spot_price("SPY")  # e.g. 542.30
+
+# Full options chain — defaults to nearest expiry
+calls, puts, expiries, expiry = get_options_chain("SPY")
+T = expiry_to_years(expiry)  # e.g. 0.038 (14 days)
+```
+
+**IV solver** (`pricing/iv_solver.py`):
+
+```python
+from pricing.iv_solver import implied_vol, full_chain_with_iv
+
+# Solve for IV of a single contract using Brent's method
+iv = implied_vol(market_price=5.40, S=542, K=545, T=0.038, r=0.0525, option_type="call")
+# → 0.187  (18.7% annualised vol)
+
+# Enrich an entire chain with IV — uses bid-ask midpoint, falls back to lastPrice
+calls_with_iv, puts_with_iv = full_chain_with_iv(calls, puts, S=S, T=T, r=r)
+# Both DataFrames now have an 'iv' column alongside yfinance's own estimate
+```
+
+`implied_vol` returns `None` (not an exception) when no valid solution exists — expired options, prices at or below intrinsic value, or contracts too far outside any realistic vol range.
 
 ## Running Tests
 
